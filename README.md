@@ -1,12 +1,12 @@
-# 🪶 Inscribe — Lightweight Document Annotation Platform
+# 🪶 Namsoong — Lightweight Document Annotation Platform
 
-**Inscribe** is a lightweight, high-performance document annotation system designed to move away from bulky, all-in-one PDF frameworks. It enables users to highlight, annotate, and compile excerpts into structured documents — all while remaining offline-first, responsive, and modular.
+**Namsoong** is a lightweight, high-performance document annotation system designed to move away from bulky, all-in-one PDF frameworks. It enables users to highlight, annotate, and compile excerpts into structured documents — all while remaining offline-first, responsive, and modular.
 
 ---
 
 ## 🧩 Core Philosophy
 
-Unlike traditional PDF editors, **Inscribe** doesn’t try to do everything at once. It focuses on **speed, minimalism, and local-first data handling**. Every action — from highlighting text to adding notes — happens instantly and offline. Heavy operations like document compilation are offloaded to backend services, keeping the app lean and responsive.
+Unlike traditional PDF editors, **Namsoong** doesn’t try to do everything at once. It focuses on **speed, minimalism, and local-first data handling**. Every action — from highlighting text to adding notes — happens instantly and offline. Heavy operations like document compilation are offloaded to backend services, keeping the app lean and responsive.
 
 ---
 

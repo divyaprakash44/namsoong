@@ -1,15 +1,21 @@
 // This is the main entry point for our app
+import {SafeAreaProvider} from 'react-native-safe-area-context';
+import {GestureHandlerRootView} from 'react-native-gesture-handler';
+
 import React from 'react';
 import {
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
   View,
   TextInput,
-  TouchableOpacity, // A button that fades on press
+  TouchableOpacity,
   Alert,
+  Image
 } from 'react-native';
+
+// Import from 'react-native-safe-area-context' instead
+import {SafeAreaView} from 'react-native-safe-area-context';
 
 // Navigation imports
 import {NavigationContainer} from '@react-navigation/native';
@@ -58,28 +64,38 @@ const LoginScreen = () => {
   // This is the "View" - what the component looks like (written in JSX)
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Welcome to Inscribe</Text>
-      <Text style={styles.subtitle}>Please log in to continue</Text>
+      <View style={styles.container}>
+        <Image style={styles.logo}
+        source={require("./assets/login_logo.png")}
+        />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail} // Updates the 'email' state on every keystroke
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword} // Updates the 'password' state
-        secureTextEntry // Hides the password
-      />
+        <Text style={styles.title}>Welcome to Namsoong.</Text>
+        <Text style={styles.subtitle}>Please log in to continue</Text>
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Login</Text>
-      </TouchableOpacity>
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          value={email}
+          onChangeText={setEmail} // Updates the 'email' state on every keystroke
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          value={password}
+          onChangeText={setPassword} // Updates the 'password' state
+          secureTextEntry // Hides the password
+        />
+
+        <TouchableOpacity style={styles.button} onPress={handleLogin}>
+          <Text style={styles.buttonText}>Login</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.footerText}>An experiment from Blackbody Labs</Text>
+      <Text style={styles.footerText}>By Divya Prakash Singh</Text>
+      
 
       {/* TODO: Add a "Register" button here */}
     </SafeAreaView>
@@ -94,25 +110,22 @@ const Stack = createNativeStackNavigator();
 
 function App(): React.JSX.Element {
   return (
-    <NavigationContainer>
-      <StatusBar barStyle={'dark-content'} />
-      <Stack.Navigator>
-        {/*
-          We define our screens here.
-          We only have one screen for now: "Login".
-          We're also hiding the header at the top.
-        */}
-        <Stack.Screen
-          name="Login"
-          component={LoginScreen}
-          options={{headerShown: false}}
-        />
-        {/*
-          TODO: Add an "App" stack (the main app)
-          and a "Register" screen.
-        */}
-      </Stack.Navigator>
-    </NavigationContainer>
+    // Add this wrapper
+    <GestureHandlerRootView style={{flex: 1}}>
+      {/* And add this wrapper */}
+      <SafeAreaProvider>
+        <NavigationContainer>
+          <StatusBar barStyle={'dark-content'} />
+          <Stack.Navigator>
+            <Stack.Screen
+              name="Login"
+              component={LoginScreen}
+              options={{headerShown: false}}
+            />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -125,8 +138,19 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#FFFFFF',
   },
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  logo: {
+    width: 350,
+    height: 200,
+    resizeMode: 'contain',
+    alignSelf: 'center',
+    marginBottom: 30,
+  },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#000',
     textAlign: 'center',
@@ -157,6 +181,14 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
+  },
+
+  footerText: {
+    fontSize: 14,
+    color: '#AAAAAA',
+    textAlign: 'center',
+    //paddingBottom: 20,
+    fontStyle: 'italic',
   },
 });
 

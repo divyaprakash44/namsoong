@@ -1,5 +1,30 @@
-pluginManagement { includeBuild("../node_modules/@react-native/gradle-plugin") }
+// Configure plugin repositories so Gradle can find the React Native Gradle plugin
+pluginManagement {
+	repositories {
+		gradlePluginPortal()
+		google()
+		mavenCentral()
+		maven { url("https://jitpack.io") }
+	}
+	includeBuild("../node_modules/@react-native/gradle-plugin")
+}
+
 plugins { id("com.facebook.react.settings") }
+
+// Resolve project dependencies from these repositories. This prevents library
+// build.gradle files (for example older libraries that call `jcenter()`)
+// from failing the build because repositories are declared/managed centrally.
+dependencyResolutionManagement {
+	repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+	repositories {
+		google()
+		mavenCentral()
+		maven { url("https://jitpack.io") }
+		// Optional fallback for packages still hosted only on JCenter
+		maven { url("https://jcenter.bintray.com/") }
+	}
+}
+
 extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
 rootProject.name = 'NamsoongApp'
 include ':app'

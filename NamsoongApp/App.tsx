@@ -34,6 +34,7 @@ import axios from 'axios';
 
 // Secure storage import
 import * as Keychain from 'react-native-keychain';
+import { initDatabase } from './db';
 console.log('Keychain:', Keychain);
 
 // Define the shape of our User object
@@ -113,6 +114,8 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
   useEffect(() => {
     const loadSession = async () => {
       try {
+        await initDatabase();
+        
         const credentials = await Keychain.getGenericPassword();
         if (credentials) {
           const session = JSON.parse(credentials.password);

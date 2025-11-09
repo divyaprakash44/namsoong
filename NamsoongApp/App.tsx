@@ -1,13 +1,9 @@
 // This is the main entry point for our app
-import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {GestureHandlerRootView} from 'react-native-gesture-handler';
-
 import React, {
   useState,
   useContext,
   createContext,
   useEffect,
-  useCallback,
 } from 'react';
 
 import {
@@ -40,12 +36,21 @@ import { WelcomeScreen } from './src/screens/WelcomeScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import {RegisterScreen} from './src/screens/RegisterScreen';
 
+// API Config
+const API_URL = 'http://10.0.2.2:4000';
+
+// We create an axios instance so we can easily set the auth token later
+export const api = axios.create({
+  baseURL: API_URL,
+});
+
 // Define the shape of our User object
 type UserType = {
   id: number;
   name: string;
   email: string;
 };
+type AuthType = 'new' | 'restored' | null;
 
 // Define the shape of our Auth Context
 type AuthContextType = {
@@ -55,25 +60,19 @@ type AuthContextType = {
   user: UserType | null;
   token: string | null;
   db: SQLiteDatabase | null;
+  authType: AuthType;
 };
 // --- END OF NEW TYPES ---
 
-// API Config
-const API_URL = 'http://10.0.2.2:4000';
-
-// We create an axios instance so we can easily set the auth token later
-const api = axios.create({
-  baseURL: API_URL,
-})
-
 // --- Auth Context ---
 // This is the global state for managing user authentication
-const AuthContext = createContext<AuthContextType | null>(null)
+const AuthContext = createContext<AuthContextType | null>(null);
 
 const AuthProvider = ({children}: {children: React.ReactNode}) => {
   const [user, setUser] = useState<UserType | null>(null); // the user object
   const [token, setToken] = useState<string | null>(null); // The auth token
   const [db, setDb] = useState<SQLiteDatabase | null>(null);
+  const [authType, setAuthType] = useState<AuthType>(null);
   const [isLoading, setIsLoading] = useState(true); // Loading on app start
 
   //This function is called from our screens
@@ -85,6 +84,7 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
         
         setUser(newUser);
         setToken(newToken);
+        setAuthType('new');
         api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
         await Keychain.setGenericPassword(
           'session', 
@@ -106,6 +106,7 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
 
         setUser(newUser);
         setToken(newToken);
+        setAuthType('new');
         api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
         await Keychain.setGenericPassword(
           'session', 
@@ -121,12 +122,14 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
     logout: async () => {
       setUser(null);
       setToken(null);
+      setAuthType(null);
       api.defaults.headers.common['Authorization'] = null;
       await Keychain.resetGenericPassword();
     },
     user,
     token,
     db,
+    authType,
   }
 
   // On app start, try to load the session from the keychain
@@ -144,6 +147,7 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
           const session = JSON.parse(credentials.password);
           setUser(session.user);
           setToken(session.token);
+          setAuthType('restored');
           api.defaults.headers.common[
             'Authorization'
           ] = `Bearer ${session.token}`;
@@ -194,8 +198,10 @@ const AuthStack = () => (
 );
 
 // This stack is shown when the user IS logged in
-const AppStack = () => (
-  <Stack.Navigator screenOptions={{headerShown: false}}>
+const AppStack = ({initialRouteName}: {initialRouteName: string}) => (
+  <Stack.Navigator 
+    initialRouteName={initialRouteName}
+    screenOptions={{headerShown: false}}>
     <Stack.Screen name="Welcome" component={WelcomeScreen} />
     {/*<Stack.Screen name="Home" component={HomeScreen} />
     <Stack.Screen name="PdfViewer" component={PdfViewerScreen} />*/}
@@ -204,16 +210,16 @@ const AppStack = () => (
 
 // This is the main navigator, which decides which stack to show
 const RootNavigator = () => {
-  const {token} = useAuth();
+  const {token, authType} = useAuth();
+
+  if (!token) {
+    return <AuthStack />;
+  }
 
   return (
-    <Stack.Navigator screenOptions={{headerShown: false}}>
-      {token ? (
-        <Stack.Screen name="App" component={AppStack} />
-      ) : (
-        <Stack.Screen name="Auth" component={AuthStack} />
-      )}
-    </Stack.Navigator>
+    <AppStack
+      initialRouteName={authType === 'restored' ? 'Home' : 'welcome'}
+      />
   );
 };
 

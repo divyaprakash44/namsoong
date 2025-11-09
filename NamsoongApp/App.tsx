@@ -23,7 +23,7 @@ import {
 } from 'react-native';
 
 // Import from 'react-native-safe-area-context' instead
-import {SafeAreaView} from 'react-native-safe-area-context';
+// import {SafeAreaView} from 'react-native-safe-area-context';
 
 // Navigation imports
 import {NavigationContainer} from '@react-navigation/native';
@@ -34,8 +34,15 @@ import axios from 'axios';
 
 // Secure storage import
 import * as Keychain from 'react-native-keychain';
-import { initDatabase } from './db';
-console.log('Keychain:', Keychain);
+import { initDatabase, getDBConnection } from './db';
+import { SQLiteDatabase } from 'react-native-sqlite-storage';
+
+// --- New Screen Imports ---
+import {HomeScreen} from './src/screens/HomeScreen';
+import {PdfViewerScreen} from './src/screens/PdfViewerScreen'
+import { WelcomeScreen } from './src/screens/WelcomeScreen';
+import { LoginScreen } from './src/screens/LoginScreen';
+import {RegisterScreen} from './src/screens/RegisterScreen';
 
 // Define the shape of our User object
 type UserType = {
@@ -193,159 +200,6 @@ const HomeScreen = () => {
     </SafeAreaView>
   );
 }
-
-// --- This is our Login Screen Component ---
-// A "component" is just a piece of the UI.
-const LoginScreen = ({navigation}: {navigation: any}) => {
-  // "State" holds data that can change.
-  // We create state for the email and password text inputs.
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [isLoading, setIsLoading] = React.useState(false);
-  const {login} = useAuth();
-
-  // This function will run when the "Login" button is pressed
-  const handleLogin = async () => {
-    // Basic validation
-    if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password.');
-      return;
-    }
-    setIsLoading(true);
-    try {
-        await login(email, password);
-
-    } catch (error: any) {
-        Alert.alert("Login failed", error.message);
-    }
-    setIsLoading(false);
-  };
-
-  // This is the "View" - what the component looks like (written in JSX)
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.container}>
-        <Image style={styles.logo}
-        source={require("./assets/login_logo.png")}
-        />
-
-        <Text style={styles.title}>Welcome to Namsoong.</Text>
-        <Text style={styles.subtitle}>Please log in to continue</Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail} // Updates the 'email' state on every keystroke
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword} // Updates the 'password' state
-          secureTextEntry // Hides the password
-        />
-
-        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
-          {isLoading ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <Text style={styles.buttonText}>Login</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    
-      <TouchableOpacity
-        style={styles.footerButton}
-        onPress={() => navigation.navigate('Register')}>
-        <Text style={styles.footerButtonText}>
-          Don't have an account? <Text style={styles.linkText}>Sign Up</Text>
-        </Text>
-      </TouchableOpacity>
-      <Text style={styles.footerText}>An experiment from Blackbody Labs</Text>
-      <Text style={styles.footerText}>By Divya Prakash Singh</Text>
-    </SafeAreaView>
-  );
-};
-
-const RegisterScreen = ({navigation}: {navigation: any}) => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const {register} = useAuth();
-
-  const handleRegister = async () => {
-    if (!name || !email || !password) {
-      Alert.alert('Error', 'Please fill in all fields.');
-      return;
-    }
-    setIsLoading(true);
-    try {
-      await register(name, email, password);
-      // On success, the main navigator will automatically switch screens
-    } catch (error: any) {
-      Alert.alert('Registration Failed', error.message);
-    }
-    setIsLoading(false);
-  };
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.contentContainer}>
-        <Image
-          style={styles.logo}
-          source={require('./assets/login_logo.png')}
-        />
-        <Text style={styles.title}>Create Account</Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Name"
-          value={name}
-          onChangeText={setName}
-          autoCapitalize="words"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleRegister}
-          disabled={isLoading}>
-          {isLoading ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <Text style={styles.buttonText}>Sign Up</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      <TouchableOpacity
-        style={styles.footerButton}
-        onPress={() => navigation.goBack()}>
-        <Text style={styles.footerButtonText}>
-          Already have an account? <Text style={styles.linkText}>Log In</Text>
-        </Text>
-      </TouchableOpacity>
-    </SafeAreaView>
-  );
-};
 
 // --- Navigation ---
 

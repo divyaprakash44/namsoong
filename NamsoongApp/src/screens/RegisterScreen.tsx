@@ -12,9 +12,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {useAuth} from '../../App';
-import {authStyles} from '../styles/authStyles.ts'; // We will create this next
+import {authStyles} from '../styles/loginStyles.ts'; // We will create this next
 
-const RegisterScreen = ({navigation}: {navigation: any}) => {
+export const RegisterScreen = ({navigation}: {navigation: any}) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -41,7 +41,7 @@ const RegisterScreen = ({navigation}: {navigation: any}) => {
       <View style={authStyles.contentContainer}>
         <Image
           style={authStyles.logo}
-          source={require('./assets/login_logo.png')}
+          source={require("C:/Projects/namsoong-backend/NamsoongApp/assets/login_logo.png")}
         />
         <Text style={authStyles.title}>Create Account</Text>
 

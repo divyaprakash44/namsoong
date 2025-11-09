@@ -12,11 +12,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {useAuth} from '../../App';
-import {authStyles} from '../styles/authStyles.ts'; // We will create this next
+import {authStyles} from '../styles/loginStyles.ts'; // We will create this next
 
 // --- This is our Login Screen Component ---
 // A "component" is just a piece of the UI.
-const LoginScreen = ({navigation}: {navigation: any}) => {
+export const LoginScreen = ({navigation}: {navigation: any}) => {
   // "State" holds data that can change.
   // We create state for the email and password text inputs.
   const [email, setEmail] = React.useState('');
@@ -46,7 +46,7 @@ const LoginScreen = ({navigation}: {navigation: any}) => {
     <SafeAreaView style={authStyles.container}>
       <View style={authStyles.container}>
         <Image style={authStyles.logo}
-        source={require("./assets/login_logo.png")}
+        source={require("C:/Projects/namsoong-backend/NamsoongApp/assets/login_logo.png")}
         />
 
         <Text style={authStyles.title}>Welcome to Namsoong.</Text>

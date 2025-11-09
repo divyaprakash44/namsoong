@@ -13,7 +13,7 @@ import {
 import {useAuth} from '../../App'; // We will export this from App.tsx
 
 export const WelcomeScreen = ({navigation}: {navigation: any}) => {
-  const {user} = useAuth();
+  const {user, logout} = useAuth();
 
   const onGetStarted = () => {
     // This REPLACES the Welcome screen with the Home screen.
@@ -25,13 +25,13 @@ export const WelcomeScreen = ({navigation}: {navigation: any}) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#50bcfc" />
       {/* Top Logo */}
-      <View style={styles.logoContainer}>
+      
         <Image
-          source={require('../../assets/logo_dark.png')}
+          source={require("C:/Projects/namsoong-backend/NamsoongApp/assets/logo_dark.png")}
           style={styles.logo}
         />
         {/*<Text style={styles.logoText}>Namsoong.</Text>*/}
-      </View>
+      
 
       {/* Main Content */}
       <View style={styles.content}>
@@ -43,10 +43,16 @@ export const WelcomeScreen = ({navigation}: {navigation: any}) => {
         </Text>
 
         <Image
-          source={require('../../assets/welcome_graphics.png')}
+          source={require('C:/Projects/namsoong-backend/NamsoongApp/assets/welcome_graphics.jpg')}
           style={styles.illustration}
         />
       </View>
+
+      {/* --- NEW TEMPORARY LOGOUT BUTTON --- */}
+      <TouchableOpacity style={styles.logoutButton} onPress={logout}>
+        <Text style={styles.logoutButtonText}>Temp Log Out</Text>
+      </TouchableOpacity>
+      {/* --- END OF NEW BUTTON --- */}
 
       {/* Footer Button */}
       <TouchableOpacity style={styles.button} onPress={onGetStarted}>
@@ -68,9 +74,11 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   logo: {
-    width: 30,
+    paddingTop: 120,
+    width: 150,
     height: 30,
     resizeMode: 'contain',
+    alignSelf: 'center',
     marginRight: 8,
   },
   logoText: {
@@ -82,7 +90,8 @@ const styles = StyleSheet.create({
     flex: 1, // Pushes button to bottom
     alignItems: 'center',
     paddingHorizontal: 30,
-    paddingTop: 40,
+    paddingTop: 10,
+    fontFamily: 'Hel'
   },
   title: {
     fontSize: 26,
@@ -118,5 +127,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#013247',
+  },
+  logoutButton: {
+    backgroundColor: '#ff6b6b', // A red color
+    borderRadius: 30,
+    paddingVertical: 18,
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 10, // Add some space between buttons
+    elevation: 3,
+  },
+  logoutButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
 });

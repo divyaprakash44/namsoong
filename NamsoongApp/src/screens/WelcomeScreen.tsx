@@ -43,7 +43,7 @@ export const WelcomeScreen = ({navigation}: {navigation: any}) => {
         </Text>
 
         <Image
-          source={require('C:/Projects/namsoong-backend/NamsoongApp/assets/welcome_graphics.jpg')}
+          source={require('C:/Projects/namsoong-backend/NamsoongApp/assets/welcome_graphics.png')}
           style={styles.illustration}
         />
       </View>
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 30,
     paddingTop: 10,
-    fontFamily: 'Hel'
+    
   },
   title: {
     fontSize: 26,
@@ -99,6 +99,7 @@ const styles = StyleSheet.create({
     color: '#013247',
     textAlign: 'center',
     marginBottom: 15,
+    fontFamily: 'Helvetica',
   },
   subtitle: {
     fontSize: 16,
@@ -107,8 +108,8 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   illustration: {
-    width: 300,
-    height: 300,
+    width: 500,
+    height: 350,
     resizeMode: 'contain',
   },
   button: {
@@ -121,7 +122,7 @@ const styles = StyleSheet.create({
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 3,
   },
   buttonText: {
     fontSize: 16,

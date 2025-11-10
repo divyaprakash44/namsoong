@@ -27,7 +27,8 @@
     "react-native-screens": "^4.18.0",
     "react-native-share": "^12.2.0",
     "react-native-sqlite-storage": "^6.0.1",
-    "react-native-vector-icons": "^10.3.0"
+    "react-native-vector-icons": "^10.3.0",
+    "react-native-webview": "^13.16.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

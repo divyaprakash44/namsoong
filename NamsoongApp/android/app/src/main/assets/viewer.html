@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PDF Viewer</title>
+    <!-- 1. PDF.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js"></script>
+
+    <style>
+      /* Basic styling to make it fill the screen */
+      body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #F0F0F0; }
+      #pdf-viewer { width: 100%; height: 100%; overflow: auto; }
+      #page-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 10px 0;
+      }
+      canvas {
+        border: 1px solid #ccc;
+        margin-bottom: 10px;
+        max-width: 100%;
+        height: auto !important;
+      }
+      /* This hides the default text selection layer */
+      .textLayer {
+        opacity: 0;
+        position: absolute;
+      }
+    </style>
+  </head>
+  <body>
+    
+    <div id="pdf-viewer">
+      <div id="page-container"></div>
+    </div>
+
+    <script>
+      // 2. This is the "bridge" to send messages from this WebView to React Native
+      const postMessage = (message) => {
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify(message));
+        } else {
+          console.log(message);
+        }
+      };
+
+      // 3. Setup PDF.js
+      const pdfjsLib = window["pdfjs-dist/build/pdf"];
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js";
+      
+      const pageContainer = document.getElementById("page-container");
+      let currentPdf = null;
+      let currentPage = 1;
+
+      // 4. Function to load the PDF
+      const loadPdf = async (pdfUri) => {
+        try {
+          // The 'file://' URI is passed from React Native
+          const loadingTask = pdfjsLib.getDocument(pdfUri);
+          currentPdf = await loadingTask.promise;
+          
+          postMessage({ type: 'LOAD_COMPLETE', totalPages: currentPdf.numPages });
+          
+          // Render all pages
+          for (let i = 1; i <= currentPdf.numPages; i++) {
+            const page = await currentPdf.getPage(i);
+            const viewport = page.getViewport({ scale: 1.5 });
+            
+            const canvas = document.createElement("canvas");
+            const context = canvas.getContext("2d");
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            
+            pageContainer.appendChild(canvas);
+            
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            
+            // This is the CRITICAL part: we get the text content
+            const textContent = await page.getTextContent();
+            
+            // We find the page's bounding box relative to the document
+            const pageOffset = canvas.offsetTop;
+            
+            // We add an *invisible* div on top of the canvas
+            // We will use this to capture selection events
+            const textLayer = document.createElement("div");
+            textLayer.className = "textLayer";
+            textLayer.style.width = canvas.width + 'px';
+            textLayer.style.height = canvas.height + 'px';
+            textLayer.style.left = canvas.offsetLeft + 'px';
+            textLayer.style.top = canvas.offsetTop + 'px';
+            
+            // We have to put the text into the div for selection to work
+            textContent.items.forEach(item => {
+              const span = document.createElement('span');
+              span.style.left = item.transform[4] + 'px';
+              span.style.top = (item.transform[5]) + 'px';
+              span.style.height = item.height + 'px';
+              span.style.width = item.width + 'px';
+              span.style.position = 'absolute';
+              span.style.fontSize = (item.height * 0.8) + 'px'; // Approximate font size
+              span.style.fontFamily = 'Helvetica'; // Use our font
+              span.style.color = 'transparent'; // Make it invisible
+              span.textContent = item.str;
+              textLayer.appendChild(span);
+            });
+            
+            pageContainer.appendChild(textLayer);
+          }
+
+        } catch (err) {
+          postMessage({ type: 'ERROR', message: err.message });
+        }
+      };
+
+      // 5. This is the main text selection listener!
+      document.addEventListener("selectionchange", () => {
+        const selection = window.getSelection();
+        const selectedText = selection.toString().trim();
+        
+        if (selectedText.length > 0) {
+          // Find what page we're on (this is a simple approximation)
+          let approxPage = 1;
+          if (selection.anchorNode && selection.anchorNode.parentElement) {
+            const textLayer = selection.anchorNode.parentElement.closest('.textLayer');
+            if (textLayer) {
+              const allLayers = Array.from(document.querySelectorAll('.textLayer'));
+              approxPage = allLayers.indexOf(textLayer) + 1;
+            }
+          }
+          currentPage = approxPage;
+          
+          // Send the selected text back to React Native
+          postMessage({ type: 'SELECTION_CHANGED', text: selectedText, page: currentPage });
+        } else {
+          // User deselected (tapped away)
+          postMessage({ type: 'SELECTION_CHANGED', text: '', page: currentPage });
+        }
+      });
+      
+      // 6. Listen for messages FROM React Native
+      document.addEventListener("message", (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'LOAD_PDF') {
+          loadPdf(data.source.uri);
+        }
+      });
+    </script>
+  </body>
+</html>

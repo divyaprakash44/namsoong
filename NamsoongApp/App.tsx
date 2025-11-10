@@ -33,7 +33,7 @@ import { SQLiteDatabase } from 'react-native-sqlite-storage';
 
 // --- New Screen Imports ---
 import {HomeScreen} from './src/screens/HomeScreen';
-//import {PdfViewerScreen} from './src/screens/PdfViewerScreen'
+import {PdfViewerScreen} from './src/screens/PdfViewerScreen'
 import { WelcomeScreen } from './src/screens/WelcomeScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import {RegisterScreen} from './src/screens/RegisterScreen';
@@ -246,7 +246,7 @@ const AppStack = ({initialRouteName}: {initialRouteName: string}) => (
     screenOptions={{headerShown: false}}>
     <Stack.Screen name="Welcome" component={WelcomeScreen} />
     <Stack.Screen name="Main" component={MainTabNavigator} />
-    {/*<Stack.Screen name="PdfViewer" component={PdfViewerScreen} />*/}
+    <Stack.Screen name="PdfViewer" component={PdfViewerScreen} />
   </Stack.Navigator>
 );
 

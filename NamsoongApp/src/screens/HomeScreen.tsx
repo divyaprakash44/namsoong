@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import {useAuth} from '../../App';
 import {styles} from '../styles/homeStyles.ts'
-import {PERMISSIONS, request, RESULTS} from 'react-native-permissions';
 import DocumentPicker from 'react-native-document-picker';
 
 // --- Helper function for the greeting ---
@@ -39,37 +38,7 @@ export const HomeScreen = ({navigation}: {navigation: any}) => {
     setGreeting(getGreeting());
   }, []);
 
-  const requestFilePermission = async () => {
-    // We only need to ask on Android
-    if (Platform.OS === 'android') {
-      try {
-        // We need 'read' permission
-        const result = await request(
-          PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE,
-        );
-        if (result === RESULTS.GRANTED) {
-          return true; // Permission granted
-        } else {
-          Alert.alert(
-            'Permission Denied',
-            'Cannot open files without permission.',
-          );
-          return false;
-        }
-      } catch (err) {
-        console.warn(err);
-        return false;
-      }
-    }
-    return true; // On iOS or other platforms, assume true
-  };
-
   const handleOpenPdf = async () => {
-    const hasPermission = await requestFilePermission();
-    if (!hasPermission) {
-      return; // Stop if no permission
-    }
-
     // Now, open the file picker
     try {
       const res = await DocumentPicker.pickSingle({

@@ -18,7 +18,7 @@ export const WelcomeScreen = ({navigation}: {navigation: any}) => {
   const onGetStarted = () => {
     // This REPLACES the Welcome screen with the Home screen.
     // This means the user can't press "back" to get to this screen.
-    navigation.replace('Home');
+    navigation.replace('Main');
   };
 
   return (

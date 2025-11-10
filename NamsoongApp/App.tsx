@@ -21,6 +21,8 @@ import {
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 
+import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import Icon from 'react-native-vector-icons/Ionicons';
 // API import
 import axios from 'axios';
 
@@ -35,6 +37,7 @@ import {HomeScreen} from './src/screens/HomeScreen';
 import { WelcomeScreen } from './src/screens/WelcomeScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import {RegisterScreen} from './src/screens/RegisterScreen';
+import { AccountScreen } from './src/screens/AccountScreen';
 
 // API Config
 const API_URL = 'http://10.0.2.2:4000';
@@ -186,8 +189,47 @@ const LoadingScreen = () => (
 );
 
 // --- Navigation ---
-
+const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
+
+// --- NEW bottom tab manager ---
+const MainTabNavigator = () => {
+  return (
+    <Tab.Navigator
+      screenOptions={({route}) => ({
+        headerShown: false, // We use our own headers inside the screens
+        tabBarIcon: ({focused, color, size}) => {
+          let iconName;
+          if (route.name === 'HomeTab') {
+            iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'AccountTab') {
+            iconName = focused ? 'person' : 'person-outline';
+          }
+          // @ts-ignore - iconName will be set
+          return <Icon name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: '#007AFF', // Active icon color
+        tabBarInactiveTintColor: '#666', // Inactive icon color
+        tabBarStyle: {
+          backgroundColor: '#FFFFFF', // Tab bar background
+        },
+        tabBarLabelStyle: {
+          fontFamily: 'Helvetica',
+        },
+      })}>
+      <Tab.Screen
+        name="HomeTab"
+        component={HomeScreen}
+        options={{title: 'Home'}}
+      />
+      <Tab.Screen
+        name="AccountTab"
+        component={AccountScreen}
+        options={{title: 'Account'}}
+      />
+    </Tab.Navigator>
+  );
+};
 
 // This stack is shown when the user is NOT logged in
 const AuthStack = () => (
@@ -203,7 +245,7 @@ const AppStack = ({initialRouteName}: {initialRouteName: string}) => (
     initialRouteName={initialRouteName}
     screenOptions={{headerShown: false}}>
     <Stack.Screen name="Welcome" component={WelcomeScreen} />
-    <Stack.Screen name="Home" component={HomeScreen} />
+    <Stack.Screen name="Main" component={MainTabNavigator} />
     {/*<Stack.Screen name="PdfViewer" component={PdfViewerScreen} />*/}
   </Stack.Navigator>
 );
@@ -218,7 +260,7 @@ const RootNavigator = () => {
 
   return (
     <AppStack
-      initialRouteName={authType === 'restored' ? 'Home' : 'welcome'}
+      initialRouteName={authType === 'restored' ? 'Main' : 'Welcome'}
       />
   );
 };

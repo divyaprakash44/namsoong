@@ -101,9 +101,9 @@ export const PdfViewerScreen = ({
   // This tells the WebView to load the PDF *after* the HTML page is ready
   const handleWebViewLoad = () => {
     if (webViewRef.current) {
-      webViewRef.current.injectJavaScript(
-        webViewBridge({type: 'LOAD_PDF', source: source}),
-      );
+        webViewRef.current.injectJavaScript(
+            webViewBridge({type: 'LOAD_PDF', source: source}),
+        );
     }
   };
 
@@ -140,7 +140,7 @@ export const PdfViewerScreen = ({
       <View style={styles.pdfContainer}>
         <WebView
           ref={webViewRef}
-          source={htmlSource}
+          source={{uri: 'file:///android_asset/viewer.html'}}
           style={styles.webview}
           originWhitelist={['*']}
           allowFileAccess={true}

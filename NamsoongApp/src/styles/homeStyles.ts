@@ -15,7 +15,7 @@ export const styles = StyleSheet.create({
     backgroundColor: '#f4f4f8',
   },
   logo: {
-    paddingTop: 120,
+    paddingTop: 50,
     width: 150,
     height: 30,
     resizeMode: 'contain',

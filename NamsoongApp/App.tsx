@@ -1,3 +1,15 @@
+import { NativeModules } from 'react-native';
+console.log('RN NativeModules keys:', Object.keys(NativeModules));
+// show specific candidate modules if present
+console.log('NativeModules snapshot (some keys):', {
+  RNFS: NativeModules.RNFS,
+  RNSqliteStorage: NativeModules.RNSqliteStorage,
+  RNKeychain: NativeModules.RNKeychain,
+  RNGestureHandler: NativeModules.RNGestureHandler,
+});
+
+
+
 // This is the main entry point for our app
 import React, {
   useState,
@@ -40,7 +52,7 @@ import {RegisterScreen} from './src/screens/RegisterScreen';
 import { AccountScreen } from './src/screens/AccountScreen';
 
 // API Config
-const API_URL = 'http://10.0.2.2:4000';
+const API_URL = 'http://192.168.1.5:4000';
 
 // We create an axios instance so we can easily set the auth token later
 export const api = axios.create({

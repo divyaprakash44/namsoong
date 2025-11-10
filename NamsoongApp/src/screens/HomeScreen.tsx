@@ -12,7 +12,13 @@ import {
 } from 'react-native';
 import {useAuth} from '../../App';
 import {styles} from '../styles/homeStyles.ts'
+// Lazy-require native modules to avoid runtime errors during module evaluation
+// if native modules are not yet linked or available (this can happen during
+// development when the native build hasn't been refreshed). We'll require
+// them inside the handler where they're actually used.
 import DocumentPicker from 'react-native-document-picker';
+
+import RNFS from 'react-native-fs';
 
 // --- Helper function for the greeting ---
 const getGreeting = () => {
@@ -39,21 +45,67 @@ export const HomeScreen = ({navigation}: {navigation: any}) => {
   }, []);
 
   const handleOpenPdf = async () => {
+    // Require native modules at call-time so a missing native binding does
+    // not break module evaluation when the app first loads.
+    let DocumentPicker: any;
+    let ReactNativeBlobUtil: any;
+    let RNFS: any;
+    try {
+      DocumentPicker = require('react-native-document-picker');
+    } catch (e) {
+      Alert.alert('Native module missing', 'react-native-document-picker is not available. Please rebuild the app.');
+      console.error('DocumentPicker require error', e);
+      return;
+    }
+    try {
+      ReactNativeBlobUtil = require('react-native-blob-util');
+    } catch (e) {
+      // ReactNativeBlobUtil is optional for resolving URIs; we can continue
+      // without it and try RNFS as a fallback.
+      ReactNativeBlobUtil = null;
+    }
+    try {
+      RNFS = require('react-native-fs');
+    } catch (e) {
+      RNFS = null;
+    }
     // Now, open the file picker
     try {
       const res = await DocumentPicker.pickSingle({
         type: [DocumentPicker.types.pdf], // Only allow PDFs
+        copyTo: 'cachesDirectory',
       });
 
       // User picked a file!
       console.log('Selected file:', res);
+
+      // Read the file into a Base64 string
+      let finalUri= res.fileCopyUri;
+      if (!finalUri) {
+        if (ReactNativeBlobUtil && ReactNativeBlobUtil.fs && ReactNativeBlobUtil.fs.stat) {
+          finalUri = (await ReactNativeBlobUtil.fs.stat(res.uri)).path;
+        } else if (RNFS && RNFS.stat) {
+          // RNFS.stat returns a promise with a `path` on Android
+          const st = await RNFS.stat(res.uri);
+          finalUri = st.path || res.uri;
+        } else {
+          // If we can't resolve a file path, use the raw uri and hope the PdfViewer
+          // can consume it (content:// URIs sometimes work).
+          finalUri = res.uri;
+        }
+      }
+      if (!finalUri.startsWith('file://')) {
+        finalUri = 'file://' + finalUri;
+      }
+
+      console.log('Navigating with stable URI:', finalUri);
 
       // Now we navigate to the PdfViewer
       navigation.navigate('PdfViewer', {
         pdfId: res.name, // Use filename as the ID
         title: res.name,
         // The source is now a 'file://' URI
-        source: {uri: res.uri, cache: false}, 
+        source: {uri: finalUri}, 
       });
 
     } catch (err) {

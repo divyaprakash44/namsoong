@@ -1,34 +1,41 @@
-<!DOCTYPE html>
+
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>PDF Viewer</title>
-    <!-- 1. PDF.js Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js"></script>
+    
+    <!-- 1. PDF.js Library (LOADING LOCALLY) -->
+    <!-- Make sure you have these files in /android/app/src/main/assets/js/ -->
+    <script src="./js/pdf.min.js"></script>
+    <script src="./js/pdf.worker.min.js"></script>
+
+    <!-- 2. FIX for INVISIBLE SELECTION: Load the official PDF.js CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf_viewer.min.css"
+    />
 
     <style>
-      /* Basic styling to make it fill the screen */
       body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #F0F0F0; }
-      #pdf-viewer { width: 100%; height: 100%; overflow: auto; }
+      #pdf-viewer {
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+      }
       #page-container {
         display: flex;
         flex-direction: column;
         align-items: center;
         padding: 10px 0;
       }
-      canvas {
-        border: 1px solid #ccc;
+      .page {
+        position: relative;
         margin-bottom: 10px;
-        max-width: 100%;
-        height: auto !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       }
-      /* This hides the default text selection layer */
-      .textLayer {
-        opacity: 0;
-        position: absolute;
-      }
+      /* We no longer need custom textLayer styles */
     </style>
   </head>
   <body>
@@ -38,114 +45,153 @@
     </div>
 
     <script>
-      // 2. This is the "bridge" to send messages from this WebView to React Native
+      // 3. Setup PDF.js (loading worker locally)
+      const pdfjsLib = window["pdfjs-dist/build/pdf"];
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "./js/pdf.worker.min.js";
+      
+      const pageContainer = document.getElementById("page-container");
+      const viewer = document.getElementById("pdf-viewer");
+      let currentPdf = null;
+      let currentPage = 1;
+      let totalPages = 0;
+      let renderedPages = new Set();
+
+      // --- FIX for PIXELATION ---
+      // We will render at 2x scale. It's crisper.
+      const RENDER_SCALE = 2.0; 
+
+      // 4. PostMessage bridge (unchanged)
       const postMessage = (message) => {
         if (window.ReactNativeWebView) {
           window.ReactNativeWebView.postMessage(JSON.stringify(message));
-        } else {
-          console.log(message);
         }
       };
 
-      // 3. Setup PDF.js
-      const pdfjsLib = window["pdfjs-dist/build/pdf"];
-      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js";
-      
-      const pageContainer = document.getElementById("page-container");
-      let currentPdf = null;
-      let currentPage = 1;
+      // --- 5. FIX for 1.5 PAGE FREEZE: On-Demand Rendering ---
+      const renderPage = async (pageNum) => {
+        if (renderedPages.has(pageNum) || !currentPdf) return;
+        renderedPages.add(pageNum);
 
-      // 4. Function to load the PDF
+        try {
+          const page = await currentPdf.getPage(pageNum);
+          const viewport = page.getViewport({ scale: RENDER_SCALE });
+
+          const pageDiv = document.getElementById(`page-${pageNum}`);
+          pageDiv.style.width = viewport.width + 'px';
+          pageDiv.style.height = viewport.height + 'px';
+
+          const canvas = document.createElement("canvas");
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          
+          const textLayerDiv = document.createElement("div");
+          textLayerDiv.className = "textLayer";
+          textLayerDiv.style.width = viewport.width + 'px';
+          textLayerDiv.style.height = viewport.height + 'px';
+
+          pageDiv.appendChild(canvas);
+          pageDiv.appendChild(textLayerDiv);
+
+          await page.render({
+            canvasContext: canvas.getContext("2d"),
+            viewport: viewport,
+          }).promise;
+
+          const textContent = await page.getTextContent();
+          pdfjsLib.renderTextLayer({
+            textContentSource: textContent,
+            container: textLayerDiv,
+            viewport: viewport,
+            textDivs: [],
+          });
+
+        } catch (err) {
+          console.error(`Failed to render page ${pageNum}`, err);
+        }
+      };
+
+      // 6. This function checks which pages *should* be visible
+      const queueRender = () => {
+        if (!currentPdf) return;
+        
+        const viewerRect = viewer.getBoundingClientRect();
+        let visiblePage = 1;
+
+        for (let i = 1; i <= totalPages; i++) {
+          const pageDiv = document.getElementById(`page-${i}`);
+          if (!pageDiv) continue; 
+
+          const pageRect = pageDiv.getBoundingClientRect();
+          const isVisible = (pageRect.bottom >= viewerRect.top - 500) && 
+                            (pageRect.top <= viewerRect.bottom + 500);
+
+          if (isVisible) {
+            if (pageRect.top <= viewerRect.top + 100) {
+              visiblePage = i;
+            }
+            renderPage(i);
+            renderPage(i + 1);
+          }
+        }
+        
+        if (visiblePage !== currentPage) {
+          currentPage = visiblePage;
+          postMessage({ type: 'PAGE_CHANGED', page: currentPage, totalPages: totalPages });
+        }
+      };
+
+      // 7. Function to load the PDF (This is our entry point)
       const loadPdf = async (pdfUri) => {
         try {
-          // The 'file://' URI is passed from React Native
-          const loadingTask = pdfjsLib.getDocument(pdfUri);
+          // We load from the URI (file://...)
+          const loadingTask = pdfjsLib.getDocument(pdfUri); 
           currentPdf = await loadingTask.promise;
+          totalPages = currentPdf.numPages;
           
-          postMessage({ type: 'LOAD_COMPLETE', totalPages: currentPdf.numPages });
+          postMessage({ type: 'LOAD_COMPLETE', totalPages: totalPages });
           
-          // Render all pages
-          for (let i = 1; i <= currentPdf.numPages; i++) {
+          pageContainer.innerHTML = '';
+          renderedPages.clear();
+
+          // Create placeholders for all pages
+          for (let i = 1; i <= totalPages; i++) {
+            const pageDiv = document.createElement("div");
+            pageDiv.id = `page-${i}`;
             const page = await currentPdf.getPage(i);
-            const viewport = page.getViewport({ scale: 1.5 });
-            
-            const canvas = document.createElement("canvas");
-            const context = canvas.getContext("2d");
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-            
-            pageContainer.appendChild(canvas);
-            
-            await page.render({ canvasContext: context, viewport: viewport }).promise;
-            
-            // This is the CRITICAL part: we get the text content
-            const textContent = await page.getTextContent();
-            
-            // We find the page's bounding box relative to the document
-            const pageOffset = canvas.offsetTop;
-            
-            // We add an *invisible* div on top of the canvas
-            // We will use this to capture selection events
-            const textLayer = document.createElement("div");
-            textLayer.className = "textLayer";
-            textLayer.style.width = canvas.width + 'px';
-            textLayer.style.height = canvas.height + 'px';
-            textLayer.style.left = canvas.offsetLeft + 'px';
-            textLayer.style.top = canvas.offsetTop + 'px';
-            
-            // We have to put the text into the div for selection to work
-            textContent.items.forEach(item => {
-              const span = document.createElement('span');
-              span.style.left = item.transform[4] + 'px';
-              span.style.top = (item.transform[5]) + 'px';
-              span.style.height = item.height + 'px';
-              span.style.width = item.width + 'px';
-              span.style.position = 'absolute';
-              span.style.fontSize = (item.height * 0.8) + 'px'; // Approximate font size
-              span.style.fontFamily = 'Helvetica'; // Use our font
-              span.style.color = 'transparent'; // Make it invisible
-              span.textContent = item.str;
-              textLayer.appendChild(span);
-            });
-            
-            pageContainer.appendChild(textLayer);
+            const viewport = page.getViewport({ scale: RENDER_SCALE });
+            pageDiv.style.width = viewport.width + 'px';
+            pageDiv.style.height = viewport.height + 'px';
+            pageDiv.className = "page";
+            pageContainer.appendChild(pageDiv);
           }
 
+          await renderPage(1);
+          await renderPage(2);
+          
+          viewer.addEventListener('scroll', queueRender);
+          
         } catch (err) {
           postMessage({ type: 'ERROR', message: err.message });
         }
       };
 
-      // 5. This is the main text selection listener!
+      // 8. Selection listener (Fixed)
       document.addEventListener("selectionchange", () => {
         const selection = window.getSelection();
         const selectedText = selection.toString().trim();
         
         if (selectedText.length > 0) {
-          // Find what page we're on (this is a simple approximation)
-          let approxPage = 1;
-          if (selection.anchorNode && selection.anchorNode.parentElement) {
-            const textLayer = selection.anchorNode.parentElement.closest('.textLayer');
-            if (textLayer) {
-              const allLayers = Array.from(document.querySelectorAll('.textLayer'));
-              approxPage = allLayers.indexOf(textLayer) + 1;
-            }
-          }
-          currentPage = approxPage;
-          
-          // Send the selected text back to React Native
           postMessage({ type: 'SELECTION_CHANGED', text: selectedText, page: currentPage });
         } else {
-          // User deselected (tapped away)
           postMessage({ type: 'SELECTION_CHANGED', text: '', page: currentPage });
         }
       });
       
-      // 6. Listen for messages FROM React Native
+      // 9. Message listener (Unchanged)
       document.addEventListener("message", (event) => {
         const data = JSON.parse(event.data);
         if (data.type === 'LOAD_PDF') {
-          loadPdf(data.source.uri);
+          loadPdf(data.source.uri); // Expecting the file path
         }
       });
     </script>

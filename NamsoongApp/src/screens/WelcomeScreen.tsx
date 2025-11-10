@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   logo: {
-    paddingTop: 120,
+    paddingTop: 0,
     width: 150,
     height: 30,
     resizeMode: 'contain',
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   illustration: {
-    width: 500,
+    width: 300,
     height: 350,
     resizeMode: 'contain',
   },

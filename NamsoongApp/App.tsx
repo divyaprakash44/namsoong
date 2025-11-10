@@ -30,7 +30,7 @@ import { initDatabase, getDBConnection } from './db';
 import { SQLiteDatabase } from 'react-native-sqlite-storage';
 
 // --- New Screen Imports ---
-//import {HomeScreen} from './src/screens/HomeScreen';
+import {HomeScreen} from './src/screens/HomeScreen';
 //import {PdfViewerScreen} from './src/screens/PdfViewerScreen'
 import { WelcomeScreen } from './src/screens/WelcomeScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
@@ -203,8 +203,8 @@ const AppStack = ({initialRouteName}: {initialRouteName: string}) => (
     initialRouteName={initialRouteName}
     screenOptions={{headerShown: false}}>
     <Stack.Screen name="Welcome" component={WelcomeScreen} />
-    {/*<Stack.Screen name="Home" component={HomeScreen} />
-    <Stack.Screen name="PdfViewer" component={PdfViewerScreen} />*/}
+    <Stack.Screen name="Home" component={HomeScreen} />
+    {/*<Stack.Screen name="PdfViewer" component={PdfViewerScreen} />*/}
   </Stack.Navigator>
 );
 

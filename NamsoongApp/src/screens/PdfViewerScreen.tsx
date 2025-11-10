@@ -136,21 +136,38 @@ export const PdfViewerScreen = ({
         </TouchableOpacity>
       </View>
 
-      {/* --- The new WebView PDF Viewer --- */}
+      {/* --- The updated WebView PDF Viewer --- */}
       <View style={styles.pdfContainer}>
         <WebView
           ref={webViewRef}
           source={htmlSource}
           style={styles.webview}
-          originWhitelist={['*']} // Allow access to 'file://'
+          originWhitelist={['*']}
           allowFileAccess={true}
           allowFileAccessFromFileURLs={true}
           allowUniversalAccessFromFileURLs={true}
           javaScriptEnabled={true}
-          onMessage={onWebViewMessage} // Receive messages from HTML
-          onLoadEnd={handleWebViewLoad} // Send message to HTML
+          onMessage={onWebViewMessage}
+          onLoadEnd={handleWebViewLoad}
           showsVerticalScrollIndicator={false}
           bounces={false}
+          // --- NEW ERROR HANDLERS ---
+          onError={syntheticEvent => {
+            const {nativeEvent} = syntheticEvent;
+            console.warn('WebView error: ', nativeEvent);
+            Alert.alert('WebView Error', `Failed to load viewer: ${nativeEvent.description}`);
+            setIsPdfLoading(false);
+          }}
+          onHttpError={syntheticEvent => {
+            const {nativeEvent} = syntheticEvent;
+            console.warn(
+              'WebView HTTP error: ',
+              nativeEvent.statusCode,
+              nativeEvent.url,
+            );
+            Alert.alert('WebView HTTP Error', `Failed to load resource: ${nativeEvent.url}`);
+            setIsPdfLoading(false);
+          }}
         />
 
         {/* Show a loading spinner on top */}

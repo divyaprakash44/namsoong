@@ -19,6 +19,7 @@ import {styles} from '../styles/homeStyles.ts'
 import DocumentPicker from 'react-native-document-picker';
 
 import RNFS from 'react-native-fs';
+import { WWW_ROOT } from '../server.ts';
 
 // --- Helper function for the greeting ---
 const getGreeting = () => {
@@ -37,82 +38,51 @@ const quickAccessData = [
 ];
 
 export const HomeScreen = ({navigation}: {navigation: any}) => {
-  const {user} = useAuth();
-  const [greeting, setGreeting] = useState('');
+    const {user} = useAuth();
+    const [greeting, setGreeting] = useState('');
 
-  useEffect(() => {
-    setGreeting(getGreeting());
-  }, []);
+    useEffect(() => {
+      setGreeting(getGreeting());
+    }, []);
 
-  const handleOpenPdf = async () => {
-    // Require native modules at call-time so a missing native binding does
-    // not break module evaluation when the app first loads.
-    let DocumentPicker: any;
-    let ReactNativeBlobUtil: any;
+    const handleOpenPdf = async () => {
+      let DocumentPicker: any;
     let RNFS: any;
     try {
       DocumentPicker = require('react-native-document-picker');
-    } catch (e) {
-      Alert.alert('Native module missing', 'react-native-document-picker is not available. Please rebuild the app.');
-      console.error('DocumentPicker require error', e);
-      return;
-    }
-    try {
-      ReactNativeBlobUtil = require('react-native-blob-util');
-    } catch (e) {
-      // ReactNativeBlobUtil is optional for resolving URIs; we can continue
-      // without it and try RNFS as a fallback.
-      ReactNativeBlobUtil = null;
-    }
-    try {
       RNFS = require('react-native-fs');
     } catch (e) {
-      RNFS = null;
+      Alert.alert('Native module missing', 'Required libraries not linked. Please rebuild the app.');
+      return;
     }
-    // Now, open the file picker
+
     try {
       const res = await DocumentPicker.pickSingle({
-        type: [DocumentPicker.types.pdf], // Only allow PDFs
-        copyTo: 'cachesDirectory',
+        type: [DocumentPicker.types.pdf],
       });
 
-      // User picked a file!
-      console.log('Selected file:', res);
+      // --- THIS IS THE CRITICAL FIX ---
+      // 1. Define where we will copy the file, inside the server's root
+      // We use res.name to keep the original filename
+      const destPath = `${WWW_ROOT}/${res.name}`;
+      
+      // 2. Copy the file from the picker's URI to our server's directory
+      await RNFS.copyFile(res.uri, destPath);
+      // --- END OF FIX ---
 
-      // Read the file into a Base64 string
-      let finalUri= res.fileCopyUri;
-      if (!finalUri) {
-        if (ReactNativeBlobUtil && ReactNativeBlobUtil.fs && ReactNativeBlobUtil.fs.stat) {
-          finalUri = (await ReactNativeBlobUtil.fs.stat(res.uri)).path;
-        } else if (RNFS && RNFS.stat) {
-          // RNFS.stat returns a promise with a `path` on Android
-          const st = await RNFS.stat(res.uri);
-          finalUri = st.path || res.uri;
-        } else {
-          // If we can't resolve a file path, use the raw uri and hope the PdfViewer
-          // can consume it (content:// URIs sometimes work).
-          finalUri = res.uri;
-        }
-      }
-      if (!finalUri.startsWith('file://')) {
-        finalUri = 'file://' + finalUri;
-      }
+      console.log(`File copied to ${destPath}`);
 
-      console.log('Navigating with stable URI:', finalUri);
-
-      // Now we navigate to the PdfViewer
       navigation.navigate('PdfViewer', {
-        pdfId: res.name, // Use filename as the ID
+        pdfId: res.name,
         title: res.name,
-        // The source is now a 'file://' URI
-        source: {uri: finalUri}, 
+        // --- We now pass the FILENAME, not the source object ---
+        filename: res.name, 
       });
-
-    } catch (err) {
+    } catch (err: any) {
       if (DocumentPicker.isCancel(err)) {
-        // User cancelled the picker
+        // User cancelled
       } else {
-        Alert.alert('Error', 'Could not open file picker.');
+        Alert.alert('Error', 'Could not open or read file.');
         console.error(err);
       }
     }

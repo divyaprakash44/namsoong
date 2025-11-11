@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -10,11 +10,9 @@
     <script src="./js/pdf.min.js"></script>
     <script src="./js/pdf.worker.min.js"></script>
 
-    <!-- 2. FIX for INVISIBLE SELECTION: Load the official PDF.js CSS -->
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf_viewer.min.css"
-    />
+    <!-- 2. FIX for INVISIBLE SELECTION: Load the official PDF.js CSS (LOCALLY) -->
+    <!-- Make sure you have this file in /android/app/src/main/assets/css/ -->
+    <link rel="stylesheet" href="./css/pdf_viewer.min.css" />
 
     <style>
       body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #F0F0F0; }
@@ -35,7 +33,6 @@
         margin-bottom: 10px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       }
-      /* We no longer need custom textLayer styles */
     </style>
   </head>
   <body>
@@ -55,27 +52,22 @@
       let currentPage = 1;
       let totalPages = 0;
       let renderedPages = new Set();
-
-      // --- FIX for PIXELATION ---
-      // We will render at 2x scale. It's crisper.
       const RENDER_SCALE = 2.0; 
 
-      // 4. PostMessage bridge (unchanged)
+      // 4. PostMessage bridge
       const postMessage = (message) => {
         if (window.ReactNativeWebView) {
           window.ReactNativeWebView.postMessage(JSON.stringify(message));
         }
       };
-
-      // --- 5. FIX for 1.5 PAGE FREEZE: On-Demand Rendering ---
+      
+      // 5. On-Demand Page Renderer
       const renderPage = async (pageNum) => {
         if (renderedPages.has(pageNum) || !currentPdf) return;
         renderedPages.add(pageNum);
-
         try {
           const page = await currentPdf.getPage(pageNum);
           const viewport = page.getViewport({ scale: RENDER_SCALE });
-
           const pageDiv = document.getElementById(`page-${pageNum}`);
           pageDiv.style.width = viewport.width + 'px';
           pageDiv.style.height = viewport.height + 'px';
@@ -104,94 +96,90 @@
             viewport: viewport,
             textDivs: [],
           });
-
         } catch (err) {
           console.error(`Failed to render page ${pageNum}`, err);
         }
       };
 
-      // 6. This function checks which pages *should* be visible
+      // 6. Scroll queue
       const queueRender = () => {
         if (!currentPdf) return;
-        
         const viewerRect = viewer.getBoundingClientRect();
         let visiblePage = 1;
-
         for (let i = 1; i <= totalPages; i++) {
           const pageDiv = document.getElementById(`page-${i}`);
           if (!pageDiv) continue; 
-
           const pageRect = pageDiv.getBoundingClientRect();
-          const isVisible = (pageRect.bottom >= viewerRect.top - 500) && 
-                            (pageRect.top <= viewerRect.bottom + 500);
-
+          const isVisible = (pageRect.bottom >= viewerRect.top - 500) && (pageRect.top <= viewerRect.bottom + 500);
           if (isVisible) {
-            if (pageRect.top <= viewerRect.top + 100) {
-              visiblePage = i;
-            }
+            if (pageRect.top <= viewerRect.top + 100) visiblePage = i;
             renderPage(i);
             renderPage(i + 1);
           }
         }
-        
         if (visiblePage !== currentPage) {
           currentPage = visiblePage;
           postMessage({ type: 'PAGE_CHANGED', page: currentPage, totalPages: totalPages });
         }
       };
 
-      // 7. Function to load the PDF (This is our entry point)
-      const loadPdf = async (pdfUri) => {
+      // 7. Function to load the PDF
+      const loadPdf = async (pdfFilename) => {
         try {
-          // We load from the URI (file://...)
-          const loadingTask = pdfjsLib.getDocument(pdfUri); 
+          // --- FIX: We load from the local server using the filename ---
+          const pdfUrl = `http://localhost:8080/${encodeURIComponent(pdfFilename)}`;
+          const loadingTask = pdfjsLib.getDocument(pdfUrl); 
+          
           currentPdf = await loadingTask.promise;
           totalPages = currentPdf.numPages;
-          
           postMessage({ type: 'LOAD_COMPLETE', totalPages: totalPages });
           
           pageContainer.innerHTML = '';
           renderedPages.clear();
-
+          
           // Create placeholders for all pages
+          const pagePromises = [];
           for (let i = 1; i <= totalPages; i++) {
-            const pageDiv = document.createElement("div");
-            pageDiv.id = `page-${i}`;
-            const page = await currentPdf.getPage(i);
+            pagePromises.push(currentPdf.getPage(i));
+          }
+          const pages = await Promise.all(pagePromises);
+          pages.forEach((page, i) => {
+            const pageNum = i + 1;
             const viewport = page.getViewport({ scale: RENDER_SCALE });
+            const pageDiv = document.createElement("div");
+            pageDiv.id = `page-${pageNum}`;
             pageDiv.style.width = viewport.width + 'px';
             pageDiv.style.height = viewport.height + 'px';
             pageDiv.className = "page";
             pageContainer.appendChild(pageDiv);
-          }
-
+          });
+          
           await renderPage(1);
           await renderPage(2);
           
           viewer.addEventListener('scroll', queueRender);
-          
         } catch (err) {
           postMessage({ type: 'ERROR', message: err.message });
         }
       };
 
-      // 8. Selection listener (Fixed)
+      // 8. Selection listener
       document.addEventListener("selectionchange", () => {
         const selection = window.getSelection();
         const selectedText = selection.toString().trim();
-        
-        if (selectedText.length > 0) {
-          postMessage({ type: 'SELECTION_CHANGED', text: selectedText, page: currentPage });
-        } else {
-          postMessage({ type: 'SELECTION_CHANGED', text: '', page: currentPage });
-        }
+        postMessage({ 
+          type: 'SELECTION_CHANGED', 
+          text: selectedText, 
+          page: currentPage 
+        });
       });
       
-      // 9. Message listener (Unchanged)
+      // 9. Message listener (from React Native)
       document.addEventListener("message", (event) => {
         const data = JSON.parse(event.data);
         if (data.type === 'LOAD_PDF') {
-          loadPdf(data.source.uri); // Expecting the file path
+          // --- FIX: We load using the FILENAME ---
+          loadPdf(data.filename); 
         }
       });
     </script>

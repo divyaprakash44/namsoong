@@ -44,6 +44,7 @@ import { initDatabase, getDBConnection } from './db';
 import { SQLiteDatabase } from 'react-native-sqlite-storage';
 
 // --- New Screen Imports ---
+import { startServer, stopServer } from './src/server';
 import {HomeScreen} from './src/screens/HomeScreen';
 import {PdfViewerScreen} from './src/screens/PdfViewerScreen'
 import { WelcomeScreen } from './src/screens/WelcomeScreen';
@@ -52,7 +53,7 @@ import {RegisterScreen} from './src/screens/RegisterScreen';
 import { AccountScreen } from './src/screens/AccountScreen';
 
 // API Config
-const API_URL = 'http://192.168.1.5:4000';
+const API_URL = 'http://localhost:4000';
 
 // We create an axios instance so we can easily set the auth token later
 export const api = axios.create({
@@ -151,6 +152,7 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
   useEffect(() => {
     const loadApp = async () => {
       try {
+        await startServer();
         // init DB
         const dbConneection = await getDBConnection();
         await initDatabase();
@@ -173,6 +175,11 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
       setIsLoading(false);
     };
     loadApp();
+
+    // --- STOP SERVER ON APP CLOSE ---
+    return () => {
+      startServer();
+    };
   }, []);
 
   return (

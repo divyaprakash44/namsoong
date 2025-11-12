@@ -27,7 +27,7 @@ export const WelcomeScreen = ({navigation}: {navigation: any}) => {
       {/* Top Logo */}
       
         <Image
-          source={require("C:/Projects/namsoong-backend/NamsoongApp/assets/logo_dark.png")}
+          source={require("../../assets/logo_dark.png")}
           style={styles.logo}
         />
         {/*<Text style={styles.logoText}>Namsoong.</Text>*/}
@@ -43,7 +43,7 @@ export const WelcomeScreen = ({navigation}: {navigation: any}) => {
         </Text>
 
         <Image
-          source={require('C:/Projects/namsoong-backend/NamsoongApp/assets/welcome_graphics.png')}
+          source={require('../../assets/welcome_graphics.png')}
           style={styles.illustration}
         />
       </View>

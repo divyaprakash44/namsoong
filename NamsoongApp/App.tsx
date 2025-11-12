@@ -1,12 +1,3 @@
-import {NativeModules} from 'react-native';
-console.log('RN NativeModules keys:', Object.keys(NativeModules));
-// show specific candidate modules if present
-console.log('NativeModules snapshot (some keys):', {
-  RNFS: NativeModules.RNFS,
-  RNSqliteStorage: NativeModules.RNSqliteStorage,
-  RNKeychain: NativeModules.RNKeychain,
-  RNGestureHandler: NativeModules.RNGestureHandler,
-});
 
 // This is the main entry point for our app
 import React, {

@@ -46,7 +46,7 @@ export const LoginScreen = ({navigation}: {navigation: any}) => {
     <SafeAreaView style={authStyles.container}>
       <View style={authStyles.container}>
         <Image style={authStyles.logo}
-        source={require("C:/Projects/namsoong-backend/NamsoongApp/assets/login_logo.png")}
+        source={require("../../assets/login_logo.png")}
         />
 
         <Text style={authStyles.title}>Welcome to Namsoong.</Text>

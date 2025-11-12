@@ -41,7 +41,7 @@ export const RegisterScreen = ({navigation}: {navigation: any}) => {
       <View style={authStyles.contentContainer}>
         <Image
           style={authStyles.logo}
-          source={require("C:/Projects/namsoong-backend/NamsoongApp/assets/login_logo.png")}
+          source={require("../../assets/login_logo.png")}
         />
         <Text style={authStyles.title}>Create Account</Text>
 

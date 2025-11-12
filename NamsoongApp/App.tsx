@@ -1,4 +1,4 @@
-import { NativeModules } from 'react-native';
+import {NativeModules} from 'react-native';
 console.log('RN NativeModules keys:', Object.keys(NativeModules));
 // show specific candidate modules if present
 console.log('NativeModules snapshot (some keys):', {
@@ -7,8 +7,6 @@ console.log('NativeModules snapshot (some keys):', {
   RNKeychain: NativeModules.RNKeychain,
   RNGestureHandler: NativeModules.RNGestureHandler,
 });
-
-
 
 // This is the main entry point for our app
 import React, {
@@ -40,17 +38,17 @@ import axios from 'axios';
 
 // Secure storage import
 import * as Keychain from 'react-native-keychain';
-import { initDatabase, getDBConnection } from './db';
-import { SQLiteDatabase } from 'react-native-sqlite-storage';
+import {initDatabase, getDBConnection} from './db';
+import {SQLiteDatabase} from 'react-native-sqlite-storage';
 
-// --- New Screen Imports ---
-import { startServer, stopServer } from './src/server';
+// --- Screen Imports ---
+// --- REMOVED: server import ---
 import {HomeScreen} from './src/screens/HomeScreen';
-import {PdfViewerScreen} from './src/screens/PdfViewerScreen'
-import { WelcomeScreen } from './src/screens/WelcomeScreen';
-import { LoginScreen } from './src/screens/LoginScreen';
+import {PdfViewerScreen} from './src/screens/PdfViewerScreen';
+import {WelcomeScreen} from './src/screens/WelcomeScreen';
+import {LoginScreen} from './src/screens/LoginScreen';
 import {RegisterScreen} from './src/screens/RegisterScreen';
-import { AccountScreen } from './src/screens/AccountScreen';
+import {AccountScreen} from './src/screens/AccountScreen';
 
 // API Config
 const API_URL = 'http://localhost:4000';
@@ -97,13 +95,13 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
       try {
         const response = await api.post('/api/auth/login', {email, password});
         const {token: newToken, user: newUser} = response.data;
-        
+
         setUser(newUser);
         setToken(newToken);
         setAuthType('new');
         api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
         await Keychain.setGenericPassword(
-          'session', 
+          'session',
           JSON.stringify({token: newToken, user: newUser}),
         );
       } catch (error) {
@@ -114,9 +112,9 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
     register: async (name: string, email: string, password: string) => {
       try {
         const response = await api.post('/api/auth/register', {
-          name, 
-          email, 
-          password
+          name,
+          email,
+          password,
         });
         const {token: newToken, user: newUser} = response.data;
 
@@ -125,13 +123,13 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
         setAuthType('new');
         api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
         await Keychain.setGenericPassword(
-          'session', 
+          'session',
           JSON.stringify({token: newToken, user: newUser}),
         );
       } catch (error) {
         console.error('Register error', error);
         throw new Error(
-          'Registration failed. That email may already be in use.'
+          'Registration failed. That email may already be in use.',
         );
       }
     },
@@ -146,18 +144,18 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
     token,
     db,
     authType,
-  }
+  };
 
   // On app start, try to load the session from the keychain
   useEffect(() => {
     const loadApp = async () => {
       try {
-        await startServer();
+        // --- REMOVED: startServer() call ---
         // init DB
         const dbConneection = await getDBConnection();
         await initDatabase();
         setDb(dbConneection);
-        
+
         // Load Session
         const credentials = await Keychain.getGenericPassword();
         if (credentials) {
@@ -176,10 +174,7 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
     };
     loadApp();
 
-    // --- STOP SERVER ON APP CLOSE ---
-    return () => {
-      startServer();
-    };
+    // --- REMOVED: Server cleanup logic ---
   }, []);
 
   return (
@@ -260,7 +255,7 @@ const AuthStack = () => (
 
 // This stack is shown when the user IS logged in
 const AppStack = ({initialRouteName}: {initialRouteName: string}) => (
-  <Stack.Navigator 
+  <Stack.Navigator
     initialRouteName={initialRouteName}
     screenOptions={{headerShown: false}}>
     <Stack.Screen name="Welcome" component={WelcomeScreen} />
@@ -280,7 +275,7 @@ const RootNavigator = () => {
   return (
     <AppStack
       initialRouteName={authType === 'restored' ? 'Main' : 'Welcome'}
-      />
+    />
   );
 };
 

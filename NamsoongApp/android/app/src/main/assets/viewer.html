@@ -2,24 +2,57 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
     <title>PDF Viewer</title>
-    
-    <!-- 1. PDF.js Library (LOADING LOCALLY) -->
-    <!-- Make sure you have these files in /android/app/src/main/assets/js/ -->
-    <script src="js/pdf.min.js"></script>
-    <script src="js/pdf.worker.min.js"></script>
 
+    <script src="./js/pdf.min.js"></script>
+    <script src="./js/pdf.worker.min.js"></script>
 
-    <!-- 2. FIX for INVISIBLE SELECTION: Load the official PDF.js CSS (LOCALLY) -->
-    <!-- Make sure you have this file in /android/app/src/main/assets/css/ -->
-    <link rel="stylesheet" href="css/pdf_viewer.min.css" />
+    <link rel="stylesheet" href="./css/pdf_viewer.min.css" />
 
     <style>
-      body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #F0F0F0; }
-      #pdf-viewer {
+      /* Basic styles to make it full-screen and usable on mobile */
+      body,
+      html {
+        margin: 0;
+        padding: 0;
         width: 100%;
         height: 100%;
+        overflow: hidden;
+        background-color: #f0f0f0;
+        font-family: sans-serif;
+      }
+      #viewer-container {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      /* This is the "Select a PDF" button */
+      #file-picker-container {
+        padding: 20px;
+        text-align: center;
+        border-bottom: 1px solid #ddd;
+        background-color: #fff;
+      }
+      #file-picker-label {
+        display: inline-block;
+        padding: 12px 20px;
+        background-color: #007aff;
+        color: white;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+      }
+      #file-picker {
+        display: none; /* The actual <input> is hidden */
+      }
+      /* This is the scrollable area for PDF pages */
+      #pdf-viewer {
+        flex-grow: 1;
         overflow: auto;
         -webkit-overflow-scrolling: touch;
       }
@@ -32,37 +65,90 @@
       .page {
         position: relative;
         margin-bottom: 10px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      /* This is your custom selection menu, hidden by default */
+      #selection-menu {
+        position: absolute;
+        display: none;
+        background-color: #333;
+        border-radius: 5px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        overflow: hidden;
+      }
+      #selection-menu button {
+        background: none;
+        border: none;
+        color: white;
+        padding: 10px 15px;
+        font-size: 14px;
+        cursor: pointer;
+        display: block;
+        width: 100%;
+        text-align: left;
+      }
+      #selection-menu button:hover {
+        background-color: #555;
+      }
+      #selection-menu button:first-child {
+        border-bottom: 1px solid #555;
       }
     </style>
   </head>
   <body>
-    
-    <div id="pdf-viewer">
-      <div id="page-container"></div>
+    <div id="selection-menu">
+      <button id="add-to-docs-btn">Add to Docs</button>
+      <button id="copy-btn">Copy</button>
+    </div>
+
+    <div id="viewer-container">
+      <div id="file-picker-container">
+        <label for="file-picker" id="file-picker-label">
+          Select a PDF File
+        </label>
+        <input type="file" id="file-picker" accept="application/pdf" />
+      </div>
+
+      <div id="pdf-viewer">
+        <div id="page-container"></div>
+      </div>
     </div>
 
     <script>
-      // 3. Setup PDF.js (loading worker locally)
-      const pdfjsLib = window["pdfjs-dist/build/pdf"];
-      pdfjsLib.GlobalWorkerOptions.workerSrc = "./js/pdf.worker.min.js";
-      
-      const pageContainer = document.getElementById("page-container");
-      const viewer = document.getElementById("pdf-viewer");
+      // 6. Setup PDF.js
+      const pdfjsLib = window['pdfjs-dist/build/pdf'];
+      pdfjsLib.GlobalWorkerOptions.workerSrc = './js/pdf.worker.min.js';
+
+      // --- Get all DOM Elements ---
+      const filePicker = document.getElementById('file-picker');
+      const filePickerContainer = document.getElementById(
+        'file-picker-container',
+      );
+      const pageContainer = document.getElementById('page-container');
+      const viewer = document.getElementById('pdf-viewer');
+      const menu = document.getElementById('selection-menu');
+      const copyBtn = document.getElementById('copy-btn');
+      const addToDocsBtn = document.getElementById('add-to-docs-btn');
+
+      // --- State Variables ---
       let currentPdf = null;
       let currentPage = 1;
       let totalPages = 0;
       let renderedPages = new Set();
-      const RENDER_SCALE = 2.0; 
+      let currentSelection = { text: '', page: 1 };
+      const RENDER_SCALE = 2.0; // Render at 2x resolution
 
-      // 4. PostMessage bridge
+      // 7. PostMessage bridge (HTML to React Native)
       const postMessage = (message) => {
         if (window.ReactNativeWebView) {
           window.ReactNativeWebView.postMessage(JSON.stringify(message));
+        } else {
+          console.log('Not in WebView, message:', message);
         }
       };
-      
-      // 5. On-Demand Page Renderer
+
+      // 8. On-Demand Page Renderer
       const renderPage = async (pageNum) => {
         if (renderedPages.has(pageNum) || !currentPdf) return;
         renderedPages.add(pageNum);
@@ -73,12 +159,12 @@
           pageDiv.style.width = viewport.width + 'px';
           pageDiv.style.height = viewport.height + 'px';
 
-          const canvas = document.createElement("canvas");
+          const canvas = document.createElement('canvas');
           canvas.width = viewport.width;
           canvas.height = viewport.height;
-          
-          const textLayerDiv = document.createElement("div");
-          textLayerDiv.className = "textLayer";
+
+          const textLayerDiv = document.createElement('div');
+          textLayerDiv.className = 'textLayer';
           textLayerDiv.style.width = viewport.width + 'px';
           textLayerDiv.style.height = viewport.height + 'px';
 
@@ -86,7 +172,7 @@
           pageDiv.appendChild(textLayerDiv);
 
           await page.render({
-            canvasContext: canvas.getContext("2d"),
+            canvasContext: canvas.getContext('2d'),
             viewport: viewport,
           }).promise;
 
@@ -99,89 +185,137 @@
           });
         } catch (err) {
           console.error(`Failed to render page ${pageNum}`, err);
+          postMessage({ type: 'ERROR', message: err.message });
         }
       };
 
-      // 6. Scroll queue
+      // 9. Scroll queue (for performance)
       const queueRender = () => {
         if (!currentPdf) return;
         const viewerRect = viewer.getBoundingClientRect();
         let visiblePage = 1;
         for (let i = 1; i <= totalPages; i++) {
           const pageDiv = document.getElementById(`page-${i}`);
-          if (!pageDiv) continue; 
+          if (!pageDiv) continue;
           const pageRect = pageDiv.getBoundingClientRect();
-          const isVisible = (pageRect.bottom >= viewerRect.top - 500) && (pageRect.top <= viewerRect.bottom + 500);
+          const isVisible =
+            pageRect.bottom >= viewerRect.top - 500 &&
+            pageRect.top <= viewerRect.bottom + 500;
           if (isVisible) {
             if (pageRect.top <= viewerRect.top + 100) visiblePage = i;
             renderPage(i);
-            renderPage(i + 1);
+            renderPage(i + 1); // Pre-render next page
           }
         }
         if (visiblePage !== currentPage) {
           currentPage = visiblePage;
-          postMessage({ type: 'PAGE_CHANGED', page: currentPage, totalPages: totalPages });
+          currentSelection.page = currentPage;
         }
       };
 
-      // 7. Function to load the PDF
-      const loadPdf = async (pdfFilename) => {
-        try {
-          // --- FIX: We load from the local server using the filename ---
-          const pdfUrl = `http://localhost:8080/${encodeURIComponent(pdfFilename)}`;
-          const loadingTask = pdfjsLib.getDocument(pdfUrl); 
-          
-          currentPdf = await loadingTask.promise;
-          totalPages = currentPdf.numPages;
-          postMessage({ type: 'LOAD_COMPLETE', totalPages: totalPages });
-          
-          pageContainer.innerHTML = '';
-          renderedPages.clear();
-          
-          // Create placeholders for all pages
-          const pagePromises = [];
-          for (let i = 1; i <= totalPages; i++) {
-            pagePromises.push(currentPdf.getPage(i));
+      // 10. --- NEW PDF LOADER ---
+      //     This function is called when the user picks a file
+      const loadPdfFromFile = (file) => {
+        const fileReader = new FileReader();
+
+        fileReader.onload = async (event) => {
+          try {
+            const pdfData = new Uint8Array(event.target.result);
+            const loadingTask = pdfjsLib.getDocument({ data: pdfData });
+
+            currentPdf = await loadingTask.promise;
+            totalPages = currentPdf.numPages;
+
+            pageContainer.innerHTML = ''; // Clear any old PDF
+            renderedPages.clear();
+
+            // Create placeholders for all pages
+            const pagePromises = [];
+            for (let i = 1; i <= totalPages; i++) {
+              pagePromises.push(currentPdf.getPage(i));
+            }
+            const pages = await Promise.all(pagePromises);
+            pages.forEach((page, i) => {
+              const pageNum = i + 1;
+              const viewport = page.getViewport({ scale: RENDER_SCALE });
+              const pageDiv = document.createElement('div');
+              pageDiv.id = `page-${pageNum}`;
+              pageDiv.style.width = viewport.width + 'px';
+              pageDiv.style.height = viewport.height + 'px';
+              pageDiv.className = 'page';
+              pageContainer.appendChild(pageDiv);
+            });
+
+            await renderPage(1);
+            await renderPage(2);
+
+            viewer.addEventListener('scroll', queueRender);
+
+            // Hide the file picker
+            filePickerContainer.style.display = 'none';
+          } catch (err) {
+            postMessage({
+              type: 'ERROR',
+              message: 'Failed to load PDF: ' + err.message,
+            });
           }
-          const pages = await Promise.all(pagePromises);
-          pages.forEach((page, i) => {
-            const pageNum = i + 1;
-            const viewport = page.getViewport({ scale: RENDER_SCALE });
-            const pageDiv = document.createElement("div");
-            pageDiv.id = `page-${pageNum}`;
-            pageDiv.style.width = viewport.width + 'px';
-            pageDiv.style.height = viewport.height + 'px';
-            pageDiv.className = "page";
-            pageContainer.appendChild(pageDiv);
-          });
-          
-          await renderPage(1);
-          await renderPage(2);
-          
-          viewer.addEventListener('scroll', queueRender);
-        } catch (err) {
-          postMessage({ type: 'ERROR', message: err.message });
-        }
+        };
+
+        // Read the file as an ArrayBuffer
+        fileReader.readAsArrayBuffer(file);
       };
 
-      // 8. Selection listener
-      document.addEventListener("selectionchange", () => {
+      // 11. --- NEW SELECTION HANDLER ---
+      //     This shows your custom menu
+      document.addEventListener('selectionchange', () => {
         const selection = window.getSelection();
-        const selectedText = selection.toString().trim();
-        postMessage({ 
-          type: 'SELECTION_CHANGED', 
-          text: selectedText, 
-          page: currentPage 
-        });
-      });
-      
-      // 9. Message listener (from React Native)
-      document.addEventListener("message", (event) => {
-        const data = JSON.parse(event.data);
-        if (data.type === 'LOAD_PDF') {
-          // --- FIX: We load using the FILENAME ---
-          loadPdf(data.filename); 
+        const text = selection.toString().trim();
+
+        if (text) {
+          currentSelection.text = text;
+          const r = selection.getRangeAt(0).getBoundingClientRect();
+          // Position menu above selection
+          menu.style.top =
+            viewer.scrollTop + r.top - menu.offsetHeight - 10 + 'px';
+          menu.style.left =
+            viewer.scrollLeft + r.left + (r.width - menu.offsetWidth) / 2 + 'px';
+          menu.style.display = 'block';
+        } else {
+          menu.style.display = 'none';
         }
+      });
+
+      // --- 12. Event Listeners ---
+
+      // Listen for the file input
+      filePicker.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (file && file.type === 'application/pdf') {
+          loadPdfFromFile(file);
+        }
+      });
+
+      // Hide menu when scrolling
+      viewer.addEventListener('scroll', () => {
+        menu.style.display = 'none';
+      });
+
+      // Listen for clicks on your custom menu buttons
+      copyBtn.addEventListener('click', () => {
+        postMessage({
+          type: 'COPY_TEXT',
+          text: currentSelection.text,
+        });
+        menu.style.display = 'none';
+      });
+
+      addToDocsBtn.addEventListener('click', () => {
+        postMessage({
+          type: 'ADD_TO_DOCS',
+          text: currentSelection.text,
+          page: currentSelection.page,
+        });
+        menu.style.display = 'none';
       });
     </script>
   </body>
